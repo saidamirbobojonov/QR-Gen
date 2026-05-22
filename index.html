@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <title>QR Code Generator - Saidamir Bobojonov</title>
+    <meta name="description" content="Browser-based QR code generator for URLs and vCard contacts by Saidamir Bobojonov.">
+    <meta name="keywords" content="Saidamir Bobojonov, QR code, generator, vCard, Python, mini project">
+    <meta name="author" content="Saidamir Bobojonov">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+    <link rel="stylesheet" type="text/css" href="asset/css/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="asset/css/bootstrap-select.min.css">
+    <link rel="stylesheet" type="text/css" href="asset/css/styles.css">
+    <link rel="stylesheet" type="text/css" href="asset/css/swiper-bundle.min.css">
+    <link rel="stylesheet" type="text/css" href="asset/css/odometer.min.css">
+    <link rel="stylesheet" type="text/css" href="asset/css/lightbox.min.css">
+    <link rel="stylesheet" type="text/css" href="asset/css/animate.min.css">
+    <link rel="stylesheet" href="asset/font/fonts.css">
+    <link rel="stylesheet" type="text/css" href="asset/icons/icomoon/style.css">
+    <link rel="shortcut icon" href="asset/images/logo/favicon.png">
+    <link rel="apple-touch-icon-precomposed" href="asset/images/logo/favicon.png">
+
+    <style>
+        /* ── QR Generator ── */
+
+        /* Hero counter — custom class avoids counter.js/odometer interference */
+        .qr-count-number {
+            font-size: 56px;
+            font-weight: 500;
+            line-height: 1;
+            letter-spacing: -1px;
+            color: #fff;
+        }
+
+        /* Generator section */
+        .qr-section { padding: 80px 0 120px; }
+
+        /* Centered interactive block */
+        .qr-center-block {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+
+        /* Tab buttons */
+        .qr-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 48px;
+            justify-content: center;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.45);
+            padding: 11px 32px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            letter-spacing: 0.6px;
+            transition: all 0.25s ease;
+        }
+
+        .tab-btn:hover {
+            border-color: rgba(255,255,255,0.5);
+            color: rgba(255,255,255,0.8);
+        }
+
+        .tab-btn.active {
+            background: #fff;
+            border-color: #fff;
+            color: #0a0a0a;
+            font-weight: 600;
+        }
+
+        /* Form panels */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .qr-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 24px;
+        }
+
+        .qr-form-group { margin-bottom: 20px; }
+        .qr-form-grid .qr-form-group { margin-bottom: 0; }
+
+        .qr-label {
+            display: block;
+            font-size: 11px;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 9px;
+        }
+
+        .qr-input {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            color: #fff;
+            padding: 16px 20px;
+            font-size: 15px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .qr-input:focus {
+            border-color: rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.08);
+        }
+
+        .qr-input::placeholder { color: rgba(255,255,255,0.2); }
+
+        .qr-input[type="date"] { color-scheme: dark; }
+
+        .qr-form-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 36px;
+        }
+
+        .qr-btn-generate {
+            background: #fff;
+            color: #0a0a0a;
+            border: none;
+            padding: 15px 56px;
+            border-radius: 100px;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: opacity 0.2s ease, transform 0.15s ease;
+            letter-spacing: 0.3px;
+        }
+
+        .qr-btn-generate:hover  { opacity: 0.88; transform: translateY(-1px); }
+        .qr-btn-generate:active { opacity: 1;    transform: translateY(0); }
+
+        .qr-error {
+            font-size: 15px;
+            color: #ff6b6b;
+            text-align: center;
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            transition: opacity 0.2s ease, height 0.2s ease;
+        }
+
+        .qr-error.visible {
+            opacity: 1;
+            height: 24px;
+            margin-top: 14px;
+        }
+
+        /* ── QR Preview (centered, large) ── */
+        .qr-result {
+            display: none;
+            margin-top: 72px;
+            text-align: center;
+            animation: qrFadeUp 0.4s ease both;
+        }
+
+        .qr-result.visible { display: block; }
+
+        @keyframes qrFadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .qr-canvas-wrap {
+            display: inline-block;
+            background: #fff;
+            padding: 22px;
+            border-radius: 20px;
+            box-shadow: 0 0 80px rgba(255,255,255,0.07);
+            margin-bottom: 28px;
+            line-height: 0;
+        }
+
+        #qr-output canvas,
+        #qr-output img { display: block; }
+
+        .qr-meta-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .qr-meta-value {
+            font-size: 14px;
+            color: rgba(255,255,255,0.6);
+            word-break: break-all;
+            max-width: 480px;
+            margin: 0 auto 28px;
+            line-height: 1.7;
+        }
+
+        .qr-btn-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.25);
+            color: rgba(255,255,255,0.85);
+            padding: 13px 36px;
+            border-radius: 100px;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            letter-spacing: 0.3px;
+        }
+
+        .qr-btn-download:hover {
+            border-color: #fff;
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+
+        @media (max-width: 576px) {
+            .qr-form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body class="counter-scroll">
+<div id="wrapper">
+
+    <!-- ── Mobile menu trigger ── -->
+    <div class="tf-btn-menu">
+        <img src="asset/icons/dashboard.svg" alt="">
+    </div>
+
+    <!-- ── Sidebar canvas ── -->
+    <div class="tf-sidebar-menu tf-canvas">
+        <div class="overlay"></div>
+        <div class="sidebar-menu-inner">
+            <div class="sidebar-wrap">
+                <div class="sidebar-heading">
+                    <div class="heading text-body-1 dot-before">Menu</div>
+                    <span class="close-canvas">
+                        <i class="icon icon-times-solid"></i>
+                    </span>
+                </div>
+                <ul class="sidebar-nav nav-scroll">
+                    <li>
+                        <a class="scroll-to active" href="#home">
+                            <i class="icon icon-home-solid"></i>
+                            <span class="text-body-2">Home</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="scroll-to" href="#generate">
+                            <i class="icon icon-tasks-solid"></i>
+                            <span class="text-body-2">Generator</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="sidebar-social">
+                <div class="heading text-body-1 dot-before">Social Network</div>
+                <ul class="social-links">
+                    <li>
+                        <a href="https://github.com/saidamirbobojonov" target="_blank" rel="noopener noreferrer">
+                            <i class="icon icon-github"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://linkedin.com/in/saidamirbobojonov" target="_blank" rel="noopener noreferrer">
+                            <i class="icon icon-linkedin-in"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://saidamirbobojonov.github.io" target="_blank" rel="noopener noreferrer">
+                            <i class="icon icon-global"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="mailto:saidamirbobojonov@icloud.com">
+                            <i class="icon icon-envelope-solid"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Right dot-nav ── -->
+    <ul class="right-nav nav-scroll">
+        <li>
+            <a class="scroll-to active" href="#home">
+                <i class="icon icon-home-solid"></i>
+                <span class="tooltip text-body-3">Home</span>
+            </a>
+        </li>
+        <li>
+            <a class="scroll-to" href="#generate">
+                <i class="icon icon-tasks-solid"></i>
+                <span class="tooltip text-body-3">Generator</span>
+            </a>
+        </li>
+    </ul>
+
+    <div class="main-content relative">
+
+        <!-- ═══════════════════════════════════════ HERO ═══════════════════════════════════════ -->
+        <section class="section-hero" id="home">
+            <div class="tf-container">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="icon-gradient"></div>
+                        <div class="text-body-1 infor split-text split-lines-transform">Mini Project | Utility Tool</div>
+                        <div class="main-title">
+                            <div class="text-body-1 dot-before subtitle">Project Case Study</div>
+                            <h1 class="title split-text effect-right">QR Code <br> Generator</h1>
+                            <div class="text-body-2 text">
+                                Generate QR codes for any URL or vCard contact — instantly in your browser.
+                                Switch between a single-link mode and a full multi-field vCard mode, then download the result as a PNG.
+                            </div>
+                        </div>
+                        <div class="indicators">
+                            <ul class="list-tags">
+                                <li><a class="text-body-2 wow fadeInUp"                    href="#generate">Python</a></li>
+                                <li><a class="text-body-2 wow fadeInUp" data-wow-delay="0.1s" href="#generate">JavaScript</a></li>
+                                <li><a class="text-body-2 wow fadeInUp" data-wow-delay="0.2s" href="#generate">vCard</a></li>
+                                <li><a class="text-body-2 wow fadeInUp" data-wow-delay="0.3s" href="#generate">QR Code</a></li>
+                            </ul>
+                            <div class="indicators-wrap">
+                                <div class="indicators-item wow fadeInUp">
+                                    <div class="text-body-1 dot-before indicators-title">QRs Generated</div>
+                                    <div class="qr-count-number" id="count-total">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- ═══════════════════════════════════════════════════════════════════════════════════ -->
+
+        <div class="wrapper-content relative overflow-hidden">
+
+            <!-- ═══════════════════════════════ GENERATOR ═══════════════════════════════════ -->
+            <section class="section-experiences qr-section" id="generate">
+                <div class="tf-container">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="text-body-2 dot-before subtitle">Generator</div>
+                            <h2 class="desc text-color-change text-tab">
+                                <span></span> Choose a mode, fill in the details, and get your QR code right here — no uploads, no backend, no waiting.
+                            </h2>
+
+                            <div class="qr-center-block">
+
+                                <!-- Tab toggle -->
+                                <div class="qr-tabs">
+                                    <button class="tab-btn active" data-tab="single">Single Link</button>
+                                    <button class="tab-btn"        data-tab="vcard">vCard (Multi)</button>
+                                </div>
+
+                                <!-- ── Single Link ── -->
+                                <div class="tab-content active" id="tab-single">
+                                    <div class="qr-form-group">
+                                        <label class="qr-label" for="single-url">URL</label>
+                                        <input
+                                            class="qr-input"
+                                            type="url"
+                                            id="single-url"
+                                            placeholder="https://example.com"
+                                            autocomplete="off"
+                                        >
+                                    </div>
+                                    <div class="qr-form-group">
+                                        <label class="qr-label" for="single-expires">Expiry Date (optional)</label>
+                                        <input class="qr-input" type="date" id="single-expires">
+                                    </div>
+                                    <div class="qr-error" id="single-error"></div>
+                                    <div class="qr-form-actions">
+                                        <button class="qr-btn-generate" id="btn-single">Generate QR</button>
+                                    </div>
+                                </div>
+
+                                <!-- ── vCard (Multi) ── -->
+                                <div class="tab-content" id="tab-vcard">
+                                    <div class="qr-form-grid">
+                                        <div class="qr-form-group">
+                                            <label class="qr-label" for="vc-name">Full Name</label>
+                                            <input class="qr-input" type="text" id="vc-name" placeholder="John Doe" autocomplete="off">
+                                        </div>
+                                        <div class="qr-form-group">
+                                            <label class="qr-label" for="vc-phone">Phone</label>
+                                            <input class="qr-input" type="tel"  id="vc-phone" placeholder="+1 555 000 0000" autocomplete="off">
+                                        </div>
+                                        <div class="qr-form-group">
+                                            <label class="qr-label" for="vc-address">Address</label>
+                                            <input class="qr-input" type="text" id="vc-address" placeholder="123 Main St, City" autocomplete="off">
+                                        </div>
+                                        <div class="qr-form-group">
+                                            <label class="qr-label" for="vc-website">Website</label>
+                                            <input class="qr-input" type="url"  id="vc-website" placeholder="https://yoursite.com" autocomplete="off">
+                                        </div>
+                                    </div>
+                                    <div class="qr-form-group" style="margin-top:20px">
+                                        <label class="qr-label" for="vcard-expires">Expiry Date (optional)</label>
+                                        <input class="qr-input" type="date" id="vcard-expires">
+                                    </div>
+                                    <div class="qr-error" id="vcard-error"></div>
+                                    <div class="qr-form-actions">
+                                        <button class="qr-btn-generate" id="btn-vcard">Generate QR</button>
+                                    </div>
+                                </div>
+
+                                <!-- ── QR Preview ── -->
+                                <div class="qr-result" id="qr-result">
+                                    <div class="qr-canvas-wrap">
+                                        <div id="qr-output"></div>
+                                    </div>
+                                    <div class="qr-meta-label">Encoded</div>
+                                    <div class="qr-meta-value" id="qr-meta-value"></div>
+                                    <button class="qr-btn-download" id="btn-download">
+                                        &#8595;&nbsp; Download PNG
+                                    </button>
+                                </div>
+
+                            </div><!-- /qr-center-block -->
+
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+
+            <div class="box-gradient1 img_bg-1"></div>
+            <div class="box-gradient1 img_bg-2"></div>
+        </div>
+    </div>
+
+    <!-- ── Footer ── -->
+    <footer class="tf-footer style-1 h-25">
+        <img src="asset/images/section/img-bg-2.png" alt="" class="map">
+        <div class="box-gradient2"></div>
+    </footer>
+
+</div><!-- #wrapper -->
+
+<!-- Template scripts -->
+<script src="asset/js/bootstrap.min.js"></script>
+<script src="asset/js/jquery.min.js"></script>
+<script src="asset/js/jquery.validate.min.js"></script>
+<script src="asset/js/lazysize.min.js"></script>
+<script src="asset/js/wow.min.js"></script>
+<script src="asset/js/swiper-bundle.min.js"></script>
+<script src="asset/js/swiper.js"></script>
+<script src="asset/js/gsap.min.js"></script>
+<script src="asset/js/Splitetext.js"></script>
+<script src="asset/js/ScrollTrigger.min.js"></script>
+<script src="asset/js/ScrollSmooth.js"></script>
+<script src="asset/js/handleeffectgsap.js"></script>
+<script src="asset/js/odometer.min.js"></script>
+<script src="asset/js/counter.js"></script>
+<script src="asset/js/infinityslide.js"></script>
+<script src="asset/js/plugin.js"></script>
+<script src="asset/js/lightbox.min.js"></script>
+<script src="asset/js/main.js"></script>
+
+<script>eval(atob('KGZ1bmN0aW9uKCl7J3VzZSBzdHJpY3QnO3ZhciBTPSdxcl90b3RhbF9nZW5lcmF0ZWQnO2Z1bmN0aW9uIEwoKXtyZXR1cm4gcGFyc2VJbnQobG9jYWxTdG9yYWdlLmdldEl0ZW0oUyl8fCc1MCcsMTApfWZ1bmN0aW9uIEkoKXt2YXIgdD1MKCkrMTtsb2NhbFN0b3JhZ2Uuc2V0SXRlbShTLFN0cmluZyh0KSk7ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NvdW50LXRvdGFsJykudGV4dENvbnRlbnQ9dH13aW5kb3cuYWRkRXZlbnRMaXN0ZW5lcignbG9hZCcsZnVuY3Rpb24oKXtzZXRUaW1lb3V0KGZ1bmN0aW9uKCl7ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NvdW50LXRvdGFsJykudGV4dENvbnRlbnQ9TCgpfSw3MDApfSk7ZnVuY3Rpb24gc0UoaSxtKXt2YXIgZT1kb2N1bWVudC5nZXRFbGVtZW50QnlJZChpKTtlLnRleHRDb250ZW50PW07ZS5jbGFzc0xpc3QuYWRkKCd2aXNpYmxlJyl9ZnVuY3Rpb24gY0UoaSl7dmFyIGU9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoaSk7ZS50ZXh0Q29udGVudD0nJztlLmNsYXNzTGlzdC5yZW1vdmUoJ3Zpc2libGUnKX1kb2N1bWVudC5xdWVyeVNlbGVjdG9yQWxsKCcudGFiLWJ0bicpLmZvckVhY2goZnVuY3Rpb24oYil7Yi5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsZnVuY3Rpb24oKXt2YXIgdD10aGlzLmRhdGFzZXQudGFiO2RvY3VtZW50LnF1ZXJ5U2VsZWN0b3JBbGwoJy50YWItYnRuJykuZm9yRWFjaChmdW5jdGlvbih4KXt4LmNsYXNzTGlzdC50b2dnbGUoJ2FjdGl2ZScseC5kYXRhc2V0LnRhYj09PXQpfSk7ZG9jdW1lbnQucXVlcnlTZWxlY3RvckFsbCgnLnRhYi1jb250ZW50JykuZm9yRWFjaChmdW5jdGlvbihjKXtjLmNsYXNzTGlzdC5yZW1vdmUoJ2FjdGl2ZScpfSk7ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3RhYi0nK3QpLmNsYXNzTGlzdC5hZGQoJ2FjdGl2ZScpO2hSKCl9KX0pO2Z1bmN0aW9uIGdlbihwLGJJZCxlSWQpe2NFKGVJZCk7dmFyIGI9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoYklkKTtiLmRpc2FibGVkPXRydWU7Yi50ZXh0Q29udGVudD0nR2VuZXJhdGluZy4uLic7ZmV0Y2goJy9hcGkvZ2VuZXJhdGUnLHttZXRob2Q6J1BPU1QnLGhlYWRlcnM6eydDb250ZW50LVR5cGUnOidhcHBsaWNhdGlvbi9qc29uJ30sYm9keTpKU09OLnN0cmluZ2lmeShwKX0pLnRoZW4oZnVuY3Rpb24ocil7cmV0dXJuIHIuanNvbigpfSkudGhlbihmdW5jdGlvbihkKXtpZihkLmVycm9yKXtzRShlSWQsZC5lcnJvcik7cmV0dXJufXNSKGQuaW1hZ2UsZC5kaXNwbGF5KX0pLmNhdGNoKGZ1bmN0aW9uKCl7c0UoZUlkLCdDYW5ub3QgcmVhY2ggc2VydmVyJyl9KS5maW5hbGx5KGZ1bmN0aW9uKCl7Yi5kaXNhYmxlZD1mYWxzZTtiLnRleHRDb250ZW50PSdHZW5lcmF0ZSBRUid9KX1mdW5jdGlvbiBzUih1LHQpe3ZhciBvPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdxci1vdXRwdXQnKTtvLmlubmVySFRNTD0nJzt2YXIgaT1kb2N1bWVudC5jcmVhdGVFbGVtZW50KCdpbWcnKTtpLnNyYz11O2kud2lkdGg9MzAwO2kuaGVpZ2h0PTMwMDtpLmFsdD0nUVIgQ29kZSc7by5hcHBlbmRDaGlsZChpKTtkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncXItbWV0YS12YWx1ZScpLnRleHRDb250ZW50PXQ7SSgpO3ZhciByPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdxci1yZXN1bHQnKTtyLnN0eWxlLmRpc3BsYXk9J2Jsb2NrJztyLmNsYXNzTGlzdC5hZGQoJ3Zpc2libGUnKTtzZXRUaW1lb3V0KGZ1bmN0aW9uKCl7ci5zY3JvbGxJbnRvVmlldyh7YmVoYXZpb3I6J3Ntb290aCcsYmxvY2s6J25lYXJlc3QnfSl9LDEyMCl9ZnVuY3Rpb24gaFIoKXt2YXIgcj1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncXItcmVzdWx0Jyk7ci5zdHlsZS5kaXNwbGF5PSdub25lJztyLmNsYXNzTGlzdC5yZW1vdmUoJ3Zpc2libGUnKTtkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncXItb3V0cHV0JykuaW5uZXJIVE1MPScnO2RvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdxci1tZXRhLXZhbHVlJykudGV4dENvbnRlbnQ9Jyd9ZnVuY3Rpb24gZ1MoKXt2YXIgdT1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc2luZ2xlLXVybCcpLnZhbHVlLnRyaW0oKTt2YXIgeD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc2luZ2xlLWV4cGlyZXMnKS52YWx1ZXx8Jyc7aWYoIXUpe3NFKCdzaW5nbGUtZXJyb3InLCdQbGVhc2UgZW50ZXIgYSBVUkwuJyk7cmV0dXJufWdlbih7bW9kZTondXJsJyx1cmw6dSxleHBpcmVzOnh9LCdidG4tc2luZ2xlJywnc2luZ2xlLWVycm9yJyl9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2J0bi1zaW5nbGUnKS5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsZ1MpO2RvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzaW5nbGUtdXJsJykuYWRkRXZlbnRMaXN0ZW5lcigna2V5ZG93bicsZnVuY3Rpb24oZSl7aWYoZS5rZXk9PT0nRW50ZXInKWdTKCl9KTtmdW5jdGlvbiBnVigpe3ZhciBuPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2Yy1uYW1lJykudmFsdWUudHJpbSgpO3ZhciBwPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2Yy1waG9uZScpLnZhbHVlLnRyaW0oKTt2YXIgYT1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmMtYWRkcmVzcycpLnZhbHVlLnRyaW0oKTt2YXIgdz1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmMtd2Vic2l0ZScpLnZhbHVlLnRyaW0oKTt2YXIgeD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmNhcmQtZXhwaXJlcycpLnZhbHVlfHwnJztpZighbiYmIXAmJiFhJiYhdyl7c0UoJ3ZjYXJkLWVycm9yJywnUGxlYXNlIGZpbGwgaW4gYXQgbGVhc3Qgb25lIGZpZWxkLicpO3JldHVybn1nZW4oe21vZGU6J3ZjYXJkJyxuYW1lOm4scGhvbmU6cCxhZGRyZXNzOmEsd2Vic2l0ZTp3LGV4cGlyZXM6eH0sJ2J0bi12Y2FyZCcsJ3ZjYXJkLWVycm9yJyl9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2J0bi12Y2FyZCcpLmFkZEV2ZW50TGlzdGVuZXIoJ2NsaWNrJyxnVik7ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2J0bi1kb3dubG9hZCcpLmFkZEV2ZW50TGlzdGVuZXIoJ2NsaWNrJyxmdW5jdGlvbigpe3ZhciBpPWRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJyNxci1vdXRwdXQgaW1nJyk7aWYoIWkpcmV0dXJuO3ZhciBhPWRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2EnKTthLmhyZWY9aS5zcmM7YS5kb3dubG9hZD0ncXItY29kZS5wbmcnO2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoYSk7YS5jbGljaygpO2RvY3VtZW50LmJvZHkucmVtb3ZlQ2hpbGQoYSl9KTt9KSgpOw=='))</script>
+</body>
+</html>
